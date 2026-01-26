@@ -4,5 +4,4 @@ kind: Kustomization
 resources:
   - api/
   - bot/
-  - db/
   # - site/
