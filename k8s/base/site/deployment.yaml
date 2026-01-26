@@ -29,11 +29,11 @@ spec:
             name: clembot-site-secrets
         resources:
           requests:
-            cpu: "250m"
-            memory: "512Mi"
+            cpu: "50m"
+            memory: "50Mi"
           limits:
-            cpu: "500m"
-            memory: "1Gi"
+            cpu: "100m"
+            memory: "256Mi"
       restartPolicy: Always
       imagePullSecrets:
         - name: ghcriocreds
