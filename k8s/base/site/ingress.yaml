@@ -17,3 +17,10 @@ spec:
             name: clembot-site
             port:
               number: 3000
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: clembot-api
+            port:
+              number: 8080
