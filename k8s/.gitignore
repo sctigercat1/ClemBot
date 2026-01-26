@@ -1,0 +1,5 @@
+# Don't commit the secrets
+secrets.yaml
+
+*.local.yaml
+kustomization.local.yaml

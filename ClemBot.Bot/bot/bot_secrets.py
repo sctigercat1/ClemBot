@@ -1,5 +1,6 @@
 import json
 import os
+from typing import Any, get_args, get_origin
 
 from bot.errors import ConfigAccessError
 from bot.utils.logging_utils import get_logger
@@ -196,51 +197,87 @@ class BotSecrets:
             raise ConfigAccessError("allow_bot_input_ids has already been initialized")
         self._allow_bot_input_ids = value
 
-    def load_development_secrets(self, lines: str) -> None:
-        secrets = json.loads(lines)
+    def _convert_value(self, value: str, type_hint: type) -> Any:
+        def convert_scalar(val: str, target_type: type) -> Any:
+            match target_type:
+                case t if t is bool:
+                    return bool(val)
+                case t if t is int:
+                    return int(val)
+                case _:
+                    return val
 
-        self.client_token = secrets["ClientToken"]
-        self.client_secret = secrets["ClientSecret"]
-        self.bot_token = secrets["BotToken"]
-        self.bot_prefix = secrets["BotPrefix"]
-        self.bot_only = secrets["BotOnly"]
-        self.startup_log_channel_ids = secrets["StartupLogChannelIds"]
-        self.error_log_channel_ids = secrets["ErrorLogChannelIds"]
-        self.repl_url = secrets["ReplUrl"]
-        self.github_url = secrets["GithubSourceUrl"]
-        self.api_url = secrets["ApiUrl"]
-        self.api_key = secrets["ApiKey"]
-        self.site_url = secrets["SiteUrl"]
-        self.docs_url = secrets["DocsUrl"]
-        self.allow_bot_input_ids = secrets["AllowBotInputIds"]
+        origin = get_origin(type_hint)
 
-        log.info("Bot Secrets Loaded")
+        if origin is list:
+            args = get_args(type_hint)
+            inner_type = args[0] if args else str
+            items = [item.strip() for item in value.split(",")]
+            return [convert_scalar(item, inner_type) for item in items]
 
-    def load_production_secrets(self) -> None:
+        return convert_scalar(value, type_hint)
 
-        # Ignore these type errors, mypy doesn't know how to handle properties that return narrower types then they are assigned too
-        self.client_token = os.environ.get("CLIENT_TOKEN")
-        self.client_secret = os.environ.get("CLIENT_SECRET")
-        self.bot_token = os.environ.get("BOT_TOKEN")
-        self.bot_prefix = os.environ.get("BOT_PREFIX")
-        self.startup_log_channel_ids = [
-            int(n) for n in os.environ.get("STARTUP_LOG_CHANNEL_IDS").split(",")  # type: ignore
-        ]
-        self.error_log_channel_ids = [
-            int(n) for n in os.environ.get("ERROR_LOG_CHANNEL_IDS").split(",")  # type: ignore
-        ]
-        self.bot_only = os.environ.get("BOT_ONLY")  # type: ignore
-        self.repl_url = os.environ.get("REPL_URL")
-        self.github_url = os.environ.get("GITHUB_URL")
-        self.api_url = os.environ.get("API_URL")
-        self.api_key = os.environ.get("API_KEY")
-        self.site_url = os.environ.get("SITE_URL")
-        self.docs_url = os.environ.get("DOCS_URL")
-        self.allow_bot_input_ids = [
-            int(n) for n in os.environ.get("ALLOW_BOT_INPUT_IDS").split(",")  # type: ignore
-        ]
+    def _load_secret(
+        self,
+        key: str,
+        json_data: dict[str, Any] | None,
+        type_hint: type = str,
+        default: Any = None,
+    ) -> Any:
+        env_value = os.environ.get(key)
+        if env_value is not None:
+            value = self._convert_value(env_value, type_hint)
+            log.info(f"{key}: loaded from environment")
+            return value
 
-        log.info("Production keys loaded")
+        if json_data and key in json_data:
+            value = json_data[key]
+            log.info(f"{key}: loaded from json file")
+            return value
+
+        if default is not None:
+            log.info(f"{key}: loaded from default")
+            return default
+
+        raise ConfigAccessError(f"No value for configuration: '{key}' found")
+
+    def load_secrets(self, *sources: str) -> None:
+        json_data = {}
+        for source_path in sources:
+            try:
+                with open(source_path) as f:
+                    file_data = json.loads(f.read())
+                    # Merge with rightmost having priority
+                    json_data.update(file_data)
+                    log.info(f"Loaded configuration from {source_path}")
+            except FileNotFoundError:
+                log.info(f"No file found at {source_path}, skipping")
+            except json.JSONDecodeError as e:
+                log.error(f"Failed to parse JSON from {source_path}: {e}")
+                raise
+
+        self.client_token = self._load_secret("CLIENT_TOKEN", json_data, str)
+        self.client_secret = self._load_secret("CLIENT_SECRET", json_data, str)
+        self.bot_token = self._load_secret("BOT_TOKEN", json_data, str)
+        self.bot_prefix = self._load_secret("BOT_PREFIX", json_data, str, default="!")
+        self.bot_only = self._load_secret("BOT_ONLY", json_data, bool, default=False)
+        self.startup_log_channel_ids = self._load_secret(
+            "STARTUP_LOG_CHANNEL_IDS", json_data, list[int]
+        )
+        self.error_log_channel_ids = self._load_secret(
+            "ERROR_LOG_CHANNEL_IDS", json_data, list[int]
+        )
+        self.repl_url = self._load_secret("REPL_URL", json_data, str)
+        self.github_url = self._load_secret(
+            "GITHUB_URL", json_data, str, default="https://github.com/ClemsonCPSC-Discord/ClemBot"
+        )
+        self.api_url = self._load_secret("API_URL", json_data, str)
+        self.api_key = self._load_secret("API_KEY", json_data, str)
+        self.site_url = self._load_secret("SITE_URL", json_data, str)
+        self.docs_url = self._load_secret("DOCS_URL", json_data, str)
+        self.allow_bot_input_ids = self._load_secret("ALLOW_BOT_INPUT_IDS", json_data, list[int])
+
+        log.info("All bot secrets loaded successfully")
 
 
 secrets = BotSecrets()

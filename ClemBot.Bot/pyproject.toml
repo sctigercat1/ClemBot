@@ -6,7 +6,7 @@ authors = [
     { name = "Jay Madden", email = "jaymaddencox@gmail.com" }
 ]
 license = { text = "MIT" }
-requires-python = ">=3.10,<3.11"
+requires-python = ">=3.13"
 dependencies = [
     "aiohttp>=3.8.3",
     "arrow>=1.2.3",
@@ -58,7 +58,7 @@ line_length = 100
 plugins = ["pydantic.mypy"]
 mypy_path = "stubs"
 files = ["bot/**/*.py"]
-python_version = "3.10"
+python_version = "3.13"
 strict = true
 warn_unused_configs = true
 namespace_packages = true

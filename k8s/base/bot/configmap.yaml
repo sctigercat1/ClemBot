@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: clembot-bot-config
+data:
+  GITHUB_URL: "https://github.com/ClemBotProject/ClemBot"
+  BOT_PREFIX: "-"
+  STARTUP_LOG_CHANNEL_IDS: "1023765938488741908"
+  ERROR_LOG_CHANNEL_IDS: "1023765938488741908"
+  ALLOW_BOT_INPUT_IDS: "1"
