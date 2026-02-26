@@ -183,7 +183,7 @@ class GradesCog(commands.Cog):
 
         # group by the prof
 
-        for i, row in df.groupby(["Instructor"]).mean().iterrows():
+        for i, row in df.groupby(["Instructor"]).mean(numeric_only=True).iterrows():
             embed = discord.Embed(title=title, color=Colors.ClemsonOrange)
             embed.description = description
             embed.set_footer(text=str(ctx.author), icon_url=ctx.author.display_avatar.url)
@@ -342,7 +342,7 @@ class GradesCog(commands.Cog):
         elif honors == "non-honors":
             title += " (Non-Honors)"
 
-        for i, row in df.groupby(["CourseId"]).mean().iterrows():
+        for i, row in df.groupby(["CourseId"]).mean(numeric_only=True).iterrows():
             embed = discord.Embed(title=title, color=Colors.ClemsonOrange)
             embed.set_footer(text=str(ctx.author), icon_url=ctx.author.display_avatar.url)
             A = f"{int(row.A.round(2) * 100)}%"
